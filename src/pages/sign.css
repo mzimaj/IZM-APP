@@ -1,0 +1,147 @@
+/* * {
+   outline: red 1px solid; 
+} */
+
+.auth-left,
+.auth-right {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.auth-left {
+  position: relative;
+  overflow: hidden;
+  color: white;
+  background: linear-gradient(180deg, #0575e6 0%, #02298a 85%, #021b79 100%);
+  padding-left: 153px;
+}
+
+.auth-left::after {
+  content: "";
+  position: absolute;
+  height: 557px;
+  width: 557px;
+  border-radius: 50%;
+  border: 1px #0575e6 solid;
+  left: -207px;
+  top: 620px;
+}
+
+.auth-left::before {
+  content: "";
+  position: absolute;
+  height: 557px;
+  width: 557px;
+  border-radius: 50%;
+  border: 1px #0575e6 solid;
+  left: -126px;
+  top: 646px;
+}
+
+.auth-left button {
+  all: unset;
+  background-color: #0575e6;
+  color: white;
+  padding: 8px 30px;
+  border-radius: 30px;
+  width: fit-content;
+  margin-top: 23px;
+}
+
+.auth-left h1 {
+  font-size: 40px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.auth-left p {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.auth-right {
+  padding-left: 109px;
+  padding-right: 160px;
+  gap: 40px;
+}
+
+.auth-right h2 {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.auth-right p {
+  font-size: 18px;
+  margin: 0;
+}
+
+.auth-right form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-right form button {
+  all: unset;
+  padding: 18px 26px;
+  border-radius: 30px;
+  background-color: #0575e6;
+  text-align: center;
+  color: white;
+}
+
+.auth-right form button:disabled {
+  opacity: 50%;
+}
+
+.auth-right form input {
+  width: 100%;
+  padding: 18px 65px;
+  border-radius: 30px;
+  background-color: #fff;
+  border: 1px solid #eee;
+}
+
+.auth-right .input-wrapper {
+  position: relative;
+}
+
+.auth-right .input-wrapper svg {
+  position: absolute;
+  top: 50%;
+  left: 26px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  color: #eee;
+}
+
+.auth-right a, .signin {
+    font-size: 14px;
+    text-align: center;
+    color: #333;
+    margin-top: -23px;
+}
+
+.auth-right a {
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+@media(max-width: 1400px) {
+    .auth-right {
+        padding-left: 50px;
+        padding-right: 50px;
+    }
+}
+
+@media(max-width: 778px) {
+    .auth-right {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}
