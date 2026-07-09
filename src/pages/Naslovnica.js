@@ -5,9 +5,9 @@ function Naslovnica() {
   const [page, setPage] = useState(null);
 
   useEffect(() => {
-    fetch("https://front3.edukacija.online/backend/wp-json/wp/v2/pages/33")
+    fetch("https://front3.edukacija.online/backend/wp-json/wp/v2/pages?slug=naslovnica-3")
       .then((res) => res.json())
-      .then((data) => setPage(data));
+      .then((data) => setPage(data[0]));
   }, []);
 
   if (!page) return <p>Učitavanje</p>;

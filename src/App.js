@@ -29,7 +29,15 @@ import AdminDetials from "./pages/admin/AdminDetails";
 import AdminPosts from "./pages/admin/AdminPosts";
 import AdminSettings from "./pages/admin/AdminSettings";
 
+
+import Igraci from "./pages/Igraci";
+import Klubovi from "./pages/Klubovi";
+import OPortalu from "./pages/OPortalu";
+import CookiePolicy from "./pages/CookiePolicy";
+
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+
+
 
 
 
@@ -46,6 +54,12 @@ function App() {
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogSingle />} />
             <Route path="/kontakt" element={<Kontakt />} />
+
+            <Route path="/igraci" element={<Igraci />} />
+            <Route path="/klubovi" element={<Klubovi />} />
+            <Route path="/o-portalu" element={<OPortalu />} />
+            <Route path="/cookie-policy" element={<CookiePolicy />} />
+
             <Route path="/privacy" element={<PrivacyPolicy />} />
 
 

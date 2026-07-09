@@ -1,4 +1,4 @@
-import { useLocation } from "react-router";
+import { Link, useLocation } from "react-router";
 
 function Footer() {
   const location = useLocation();
@@ -79,7 +79,18 @@ function Footer() {
         </a>
       </div>
 
-      <p className="copyright">Copyright ©2020 All rights reserved</p>
+      <div className="footer-links mb-3">
+  <Link to="/privacy" className="mx-2">
+    Privacy Policy
+  </Link>
+  <Link to="/cookie-policy" className="mx-2">
+    Cookie Policy
+  </Link>
+</div>
+
+      <p className="copyright">
+        © 2026 CFA – Croatian Footballers Abroad. Sva prava pridržana.
+      </p>
     </footer>
   );
 }

@@ -27,7 +27,7 @@ function Nav() {
     <nav className="navbar navbar-expand-lg">
       <div className="container">
         <Link className="navbar-brand" to="/">
-          Navbar
+          CFA
         </Link>
         <button
           className="navbar-toggler"
@@ -47,27 +47,27 @@ function Nav() {
           <ul className="navbar-nav py-3">
             <li className="nav-item">
               <Link className="nav-link" to="/">
-                Home
+                Naslovnica
               </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/work">
-                Work
+              <Link className="nav-link" to="/igraci">
+                Igrači
               </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/usluge">
-                Usluge
+              <Link className="nav-link" to="/klubovi">
+                Klubovi
               </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/blog">
-                Blog
+              <Link className="nav-link" to="/o-portalu">
+                O portalu
               </Link>
             </li>
             <li className="nav-item">
               <Link className="nav-link" to="/kontakt">
-                Contact
+                Kontakt
               </Link>
             </li>
             <li className="nav-item">
