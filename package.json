@@ -16,6 +16,7 @@
     "@wordpress/block-library": "^10.0.1",
     "bootstrap": "^5.3.8",
     "react": "^19.2.6",
+    "react-cookie-consent": "^10.0.1",
     "react-dom": "^19.2.6",
     "react-paginate": "^8.3.0",
     "react-router": "^7.17.0",

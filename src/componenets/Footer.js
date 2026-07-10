@@ -8,7 +8,7 @@ function Footer() {
   }
 
   return (
-    <footer className="container text-center">
+    <footer className="cfa-footer text-center">
       <div className="social-icons">
         <a href="#">
           <svg
