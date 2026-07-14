@@ -23,8 +23,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDetials from "./pages/admin/AdminDetails";
 import AdminPosts from "./pages/admin/AdminPosts";
 import AdminSettings from "./pages/admin/AdminSettings";
-
-
+import Lightbox1 from "./componenets/Lightbox";
 import Igraci from "./pages/Igraci";
 import IgracDetalji from "./pages/IgracDetalji";
 import Klubovi from "./pages/Klubovi";
@@ -54,6 +53,8 @@ function App() {
 
 
             <Route path="/privacy" element={<PrivacyPolicy />} />
+
+            <Route path="/lightbox" element={<Lightbox1 />} />
 
 
 

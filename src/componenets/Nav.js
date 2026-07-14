@@ -108,7 +108,7 @@ function Nav() {
               <button
                 type="button"
                 onClick={signOut}
-                className="btn btn-link p-0 text-white text-decoration-none"
+                className="btn btn-link p-0 text-dark text-decoration-none"
               >
                 Logout <FontAwesomeIcon icon={faSignOut} />
               </button>
