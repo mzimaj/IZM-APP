@@ -24,28 +24,28 @@ function Naslovnica() {
         const categoryId = categories[0].id;
 
         fetch(
-          `https://front3.edukacija.online/backend/wp-json/wp/v2/posts?_embed&categories=${categoryId}&per_page=5`
+          `https://front3.edukacija.online/backend/wp-json/wp/v2/posts?_embed&categories=${categoryId}&per_page=4`
         )
           .then((res) => res.json())
           .then((data) => setPosts(data));
       });
   }, []);
 
-  if (!page) return <p>Učitavanje</p>;
+  if (!page) return <p>Učitavanje...</p>;
 
-const pageParts = page.content.rendered.split(
-  "<!-- CFA_REACT_VIJESTI -->"
-);
+  const pageParts = page.content.rendered.split(
+    /<div[^>]*id=["']cfa-react-vijesti-marker["'][^>]*><\/div>/i
+  );
 
-return (
-  <>
-    <div
-      dangerouslySetInnerHTML={{
-        __html: pageParts[0],
-      }}
-    />
+  return (
+    <>
+      <div
+        dangerouslySetInnerHTML={{
+          __html: pageParts[0],
+        }}
+      />
 
-    <section className="container py-5" id="cfa-react-vijesti">
+      <section className="container py-5" id="cfa-react-vijesti">
         <h2 className="mb-4">Najnovije CFA vijesti</h2>
 
         <div className="row g-4">
@@ -54,7 +54,7 @@ return (
               post._embedded?.["wp:featuredmedia"]?.[0]?.source_url;
 
             return (
-              <div className="col-md-6 col-lg-4" key={post.id}>
+              <div className="col-md-6 col-lg-3" key={post.id}>
                 <article className="card h-100">
                   {image && (
                     <img
@@ -94,7 +94,7 @@ return (
             );
           })}
         </div>
-          </section>
+      </section>
 
       <div
         dangerouslySetInnerHTML={{

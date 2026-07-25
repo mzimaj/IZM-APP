@@ -8,27 +8,28 @@ import '@wordpress/block-library/build-style/theme.css';
 
 import "./App.css";
 
-import Footer from "./componenets/Footer";
-import Nav from "./componenets/Nav";
+import Footer from "./components/Footer";
+import Nav from "./components/Nav";
 
 import Naslovnica from "./pages/Naslovnica";
 import Kontakt from "./pages/Kontakt";
-import BlogSingle from "./componenets/BlogSingle";
+import BlogSingle from "./components/BlogSingle";
 
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import { AuthProvider } from "./context/AuthProvider";
-import ProtectedRoute from "./componenets/ProtectedRoute";
+import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDetials from "./pages/admin/AdminDetails";
 import AdminPosts from "./pages/admin/AdminPosts";
 import AdminSettings from "./pages/admin/AdminSettings";
-import Lightbox1 from "./componenets/Lightbox";
+import Lightbox1 from "./components/Lightbox";
 import Igraci from "./pages/Igraci";
 import IgracDetalji from "./pages/IgracDetalji";
 import Klubovi from "./pages/Klubovi";
+import KlubDetalji from "./pages/KlubDetalji";
 import OPortalu from "./pages/OPortalu";
-import CookieBanner from "./componenets/CookieBanner";
+import CookieBanner from "./components/CookieBanner";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 
@@ -49,6 +50,7 @@ function App() {
             <Route path="/igraci" element={<Igraci />} />
             <Route path="/igraci/:slug" element={<IgracDetalji />} />
             <Route path="/klubovi" element={<Klubovi />} />
+            <Route path="/klubovi/:slug" element={<KlubDetalji />} />
             <Route path="/o-portalu" element={<OPortalu />} />
 
 
