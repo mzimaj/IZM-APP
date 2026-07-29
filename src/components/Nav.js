@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 
-import {
-  faSignIn,
-  faSignOut,
-  faUserPlus,
-} from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+// import {
+//   faSignIn,
+//   faSignOut,
+//   faUserPlus,
+// } from "@fortawesome/free-solid-svg-icons";
+// import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import { Link, useLocation } from "react-router";
-import { useAuth } from "../context/AuthProvider";
+// import { useAuth } from "../context/AuthProvider";
 
 function Nav() {
-  const { user, validateToken } = useAuth();
+  // const { user, validateToken } = useAuth();
   const location = useLocation();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -24,19 +24,19 @@ function Nav() {
     return null;
   }
 
-  const signOut = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
-    validateToken();
-    window.location.reload();
-  };
+  // const signOut = () => {
+  //   localStorage.removeItem("token");
+  //   localStorage.removeItem("username");
+  //   validateToken();
+  //   window.location.reload();
+  // };
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark cfa-navbar">
       <div className="container">
-        <Link className="navbar-brand" to="/">
-          CFA
-        </Link>
+        <Link to="/" className="navbar-logo">
+  <img src="/logo-cfa-v5.png" alt="Croatian Footballers Abroad" />
+</Link>
 
         <button
           className="navbar-toggler"
@@ -59,7 +59,7 @@ function Nav() {
           }`}
           id="navbarNav"
         >
-          <ul className="navbar-nav py-3">
+          <ul className="navbar-nav py-0">
             <li className="nav-item">
               <Link className="nav-link" to="/">
                 Naslovnica
@@ -79,6 +79,12 @@ function Nav() {
             </li>
 
             <li className="nav-item">
+  <Link className="nav-link" to="/vijesti">
+    Vijesti
+  </Link>
+</li>
+
+            <li className="nav-item">
               <Link className="nav-link" to="/o-portalu">
                 O portalu
               </Link>
@@ -90,16 +96,16 @@ function Nav() {
               </Link>
             </li>
 
-            {user && (
+            {/* {user && (
               <li className="nav-item">
                 <Link className="nav-link" to="/admin">
                   Admin
                 </Link>
-              </li>
-            )}
+              </li> */}
+            {/* )} */}
           </ul>
 
-          <div className="d-flex gap-3 ms-md-4">
+          {/* <div className="d-flex gap-3 ms-md-4">
             {!user ? (
               <Link to="/sign-in">
                 Login <FontAwesomeIcon icon={faSignIn} />
@@ -117,7 +123,7 @@ function Nav() {
             <Link to="/sign-up">
               Register <FontAwesomeIcon icon={faUserPlus} />
             </Link>
-          </div>
+          </div> */}
         </div>
       </div>
     </nav>

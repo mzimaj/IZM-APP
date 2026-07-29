@@ -1,122 +1,156 @@
-import React, { useRef } from "react";
+import { useRef, useState } from "react";
 import emailjs from "@emailjs/browser";
-import "./kontakt.css";
-
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { library } from "@fortawesome/fontawesome-svg-core";
-
-/* import all the icons in Free Solid, Free Regular, and Brands styles */
-import { fas } from "@fortawesome/free-solid-svg-icons";
-import { far } from "@fortawesome/free-regular-svg-icons";
-import { fab } from "@fortawesome/free-brands-svg-icons";
-
-library.add(fas, far, fab);
+import {
+  faEnvelope,
+  faLocationDot,
+  faPhone,
+} from "@fortawesome/free-solid-svg-icons";
 
 function Kontakt() {
   const form = useRef();
+  const [poruka, setPoruka] = useState("");
 
   const sendEmail = (e) => {
     e.preventDefault();
+    setPoruka("Slanje poruke...");
 
     emailjs
       .sendForm("service_v5pajo9", "template_42d6cri", form.current, {
         publicKey: "UKqp4t_tLqtN7nuwN",
       })
-      .then(
-        () => {
-          console.log("SUCCESS!");
-        },
-        (error) => {
-          console.log("FAILED...", error.text);
-        },
-      );
+      .then(() => {
+        setPoruka("Poruka je uspješno poslana.");
+        form.current.reset();
+      })
+      .catch(() => {
+        setPoruka("Poruka nije poslana. Pokušajte ponovno.");
+      });
   };
 
   return (
-    <div className="container">
-      <h1 className="contact-title">Contact Us</h1>
-      <p className="contact-subtitle">
-        Any questions or remarks? Just write us a message!
+    <main className="container py-5">
+      <h1 className="fw-bold mb-2">Kontakt</h1>
+
+      <p className="text-muted mb-5">
+        Imate pitanje, prijedlog ili ispravak? Pošaljite nam poruku.
       </p>
 
-      <div className="row">
-        <div className="col-md-5 form-left">
-          <div className="form-left-header">
-            <h2>Contact information</h2>
-            <p>Say something to start a live chat!</p>
-          </div>
+      <div className="row g-4">
+        <div className="col-lg-4">
+          <section className="card h-100 p-4">
+            <h2 className="h4 mb-3">Kontakt informacije</h2>
 
-          <div className="form-left-info">
-            <a href="tel:+191234567879">
-              <FontAwesomeIcon icon="fa-solid fa-phone-volume" />
-              <span>+1012 3456 789</span>
-            </a>
-            <a href="mailto: dominik.galjar@gmail.com">
-              <FontAwesomeIcon icon="fa-solid fa-envelope" />
-              <span>dominik.galjar@gmail.com</span>
-            </a>
-            <a href="https://share.google/1bJ02PGvKy2IndmfY">
-              <FontAwesomeIcon icon="fa-solid fa-location-dot" />
-              <address>
-                <span>132 Dartmouth Street Boston,</span>
-                <span>Massachusetts 02156 United States</span>
-              </address>
-            </a>
-          </div>
+            <p className="text-muted mb-4">
+              Javite nam se putem telefona, e-maila ili kontakt obrasca.
+            </p>
 
-          <div className="form-left-socials">
-            <FontAwesomeIcon icon="fa-solid fa-x" />
-            <FontAwesomeIcon icon="fa-brands fa-instagram" />
-            <FontAwesomeIcon icon="fa-brands fa-discord" />
-          </div>
+            <a
+              href="tel:+38512345678"
+              className="d-flex align-items-center gap-3 mb-3"
+            >
+              <FontAwesomeIcon icon={faPhone} />
+              <span>+385 1 234 5678</span>
+            </a>
+
+            <a
+              href="mailto:dominik.galjar@gmail.com"
+              className="d-flex align-items-center gap-3 mb-3"
+            >
+              <FontAwesomeIcon icon={faEnvelope} />
+              <span>zimaj.marko@gmail.com</span>
+            </a>
+
+            <div className="d-flex align-items-start gap-3">
+              <FontAwesomeIcon icon={faLocationDot} className="mt-1" />
+              <span>Zagreb, Hrvatska</span>
+            </div>
+          </section>
         </div>
 
-        <div className="col-md-7 form-right">
-          {/*
-          name prebacen sa labela na input.
-          content email templatea mozemo uređivati html-om i inline css-om, a varijable dodajemo kao {{first_name}}
-          primjer:
-          <div>{{first_name}} {{last_name}}</div>
-          <div>{{email}}</div>
-          <div>{{time}}</div>
-          <p>{{message}}</p>
-          <p>{{phone_number}}</p> 
-          */}
+        <div className="col-lg-8">
+          <section className="card p-4">
+            <h2 className="h4 mb-4">Pošaljite poruku</h2>
 
-          <form ref={form} onSubmit={sendEmail}>
-            <div className="row g-5">
-              <div className="col-md-6">
-                <label htmlFor="">FirstName</label>
-                <input type="text" name="first_name" />
-              </div>
-              
-              <div className="col-md-6">
-                <label htmlFor="">Last Name</label>
-                <input type="text" name="last_name" />
-              </div>
+            <form ref={form} onSubmit={sendEmail}>
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <label className="form-label" htmlFor="first_name">
+                    Ime
+                  </label>
+                  <input
+                    className="form-control"
+                    id="first_name"
+                    name="first_name"
+                    type="text"
+                    required
+                  />
+                </div>
 
-              <div className="col-md-6">
-                <label htmlFor="">Email</label>
-                <input type="email" name="email" />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label" htmlFor="last_name">
+                    Prezime
+                  </label>
+                  <input
+                    className="form-control"
+                    id="last_name"
+                    name="last_name"
+                    type="text"
+                    required
+                  />
+                </div>
 
-              <div className="col-md-6">
-                <label htmlFor="">Phone Number</label>
-                <input type="text" name="phone_number" />
-              </div>
+                <div className="col-md-6">
+                  <label className="form-label" htmlFor="email">
+                    E-mail
+                  </label>
+                  <input
+                    className="form-control"
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                  />
+                </div>
 
-              <div className="col-md-12">
-                <label htmlFor="">Message</label>
-                <input type="text" name="message" />
+                <div className="col-md-6">
+                  <label className="form-label" htmlFor="phone_number">
+                    Broj telefona
+                  </label>
+                  <input
+                    className="form-control"
+                    id="phone_number"
+                    name="phone_number"
+                    type="tel"
+                  />
+                </div>
+
+                <div className="col-12">
+                  <label className="form-label" htmlFor="message">
+                    Poruka
+                  </label>
+                  <textarea
+                    className="form-control"
+                    id="message"
+                    name="message"
+                    rows="6"
+                    required
+                  />
+                </div>
+
+                <div className="col-12 d-flex align-items-center gap-3">
+                  <button className="btn btn-danger" type="submit">
+                    Pošalji poruku
+                  </button>
+
+                  {poruka && <span>{poruka}</span>}
+                </div>
               </div>
-              <button className="form-button ms-auto" type="submit">
-                Send Message
-              </button>
-            </div>
-          </form>
+            </form>
+          </section>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 

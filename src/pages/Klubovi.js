@@ -1,130 +1,236 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
-const API_URL =
-  "https://front3.edukacija.online/backend/wp-json/wp/v2";
+const API = "https://front3.edukacija.online/backend/wp-json/wp/v2";
+
+const izvuciId = (vrijednost) => {
+  if (!vrijednost) return null;
+  if (Array.isArray(vrijednost)) return Number(vrijednost[0]);
+  if (typeof vrijednost === "object") return Number(vrijednost.ID || vrijednost.id);
+  return Number(vrijednost);
+};
+
+const dohvatiSliku = async (vrijednost) => {
+  if (!vrijednost) return "";
+
+  if (typeof vrijednost === "string" && vrijednost.startsWith("http")) {
+    return vrijednost;
+  }
+
+  if (typeof vrijednost === "object" && !Array.isArray(vrijednost)) {
+    return (
+      vrijednost.sizes?.medium ||
+      vrijednost.sizes?.thumbnail ||
+      vrijednost.url ||
+      vrijednost.source_url ||
+      ""
+    );
+  }
+
+  const slikaId = izvuciId(vrijednost);
+  if (!slikaId) return "";
+
+  try {
+    const odgovor = await fetch(`${API}/media/${slikaId}`);
+    if (!odgovor.ok) return "";
+    const slika = await odgovor.json();
+    return slika.source_url || "";
+  } catch (error) {
+    console.error("Greška pri dohvaćanju slike:", error);
+    return "";
+  }
+};
+
+const sortirajHr = (a, b) =>
+  a.title.rendered.localeCompare(b.title.rendered, "hr", { sensitivity: "base" });
+
+async function ucitajLogotipe(stavke) {
+  const rezultati = await Promise.all(
+    stavke.map(async (stavka) => ({
+      id: stavka.id,
+      url: await dohvatiSliku(stavka.acf?.logo),
+    }))
+  );
+
+  return Object.fromEntries(rezultati.map((r) => [r.id, r.url]));
+}
+
+function Logo({ src, alt, size, placeholder = "🏟️", className = "", title }) {
+  const stil = { width: size, height: size, objectFit: "contain" };
+
+  if (src) {
+    return <img src={src} alt={alt} title={title} className={className} style={stil} />;
+  }
+
+  return (
+    <div
+      className={`bg-light rounded d-flex align-items-center justify-content-center ${className}`}
+      style={stil}
+      title={title}
+    >
+      {placeholder}
+    </div>
+  );
+}
+
+function KlubKartica({ klub, liga, logoKluba, logoLige }) {
+  return (
+    <div className="col-sm-6 col-lg-3">
+      <Link to={`/klubovi/${klub.slug}`} className="text-decoration-none text-dark">
+        <article className="card h-100 border-0 shadow-sm text-center">
+          <div className="card-body d-flex flex-column align-items-center p-4">
+            <Logo
+              src={logoKluba}
+              alt={`Logo kluba ${klub.title.rendered}`}
+              size="90px"
+              className="mb-3"
+            />
+
+            <h2 className="h6 fw-bold mb-3">{klub.title.rendered}</h2>
+
+            {liga && (
+              <div className="mt-auto">
+                {logoLige ? (
+                  <img
+                    src={logoLige}
+                    alt={`Logo lige ${liga.title.rendered}`}
+                    title={liga.title.rendered}
+                    style={{ width: "45px", height: "45px", objectFit: "contain" }}
+                  />
+                ) : (
+                  <span title={liga.title.rendered}>🏆</span>
+                )}
+              </div>
+            )}
+          </div>
+        </article>
+      </Link>
+    </div>
+  );
+}
+
+function LigaDugme({ liga, logo, aktivna, onClick }) {
+  return (
+    <div className="col-6 col-sm-4 col-md-3 col-lg">
+      <button
+        type="button"
+        className={`card w-100 h-100 border-0 shadow-sm ${aktivna ? "border border-danger" : ""}`}
+        onClick={onClick}
+        title={`Prikaži klubove iz lige ${liga.title.rendered}`}
+      >
+        <div
+          className="card-body d-flex align-items-center justify-content-center p-3"
+          style={{ minHeight: "110px" }}
+        >
+          {logo ? (
+            <img
+              src={logo}
+              alt={`Logo lige ${liga.title.rendered}`}
+              style={{ width: "70px", height: "70px", objectFit: "contain" }}
+            />
+          ) : (
+            <span className="fs-2">🏆</span>
+          )}
+        </div>
+      </button>
+    </div>
+  );
+}
 
 function Klubovi() {
   const [klubovi, setKlubovi] = useState([]);
-  const [igraci, setIgraci] = useState([]);
-  const [logoMap, setLogoMap] = useState({});
+  const [lige, setLige] = useState([]);
+  const [logotipiKlubova, setLogotipiKlubova] = useState({});
+  const [logotipiLiga, setLogotipiLiga] = useState({});
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [greska, setGreska] = useState("");
+  const [odabranaLiga, setOdabranaLiga] = useState(null);
+  const [prikaziSve, setPrikaziSve] = useState(false);
+  const [status, setStatus] = useState({ loading: true, greska: "" });
 
   useEffect(() => {
-    const dohvatiPodatke = async () => {
-      try {
-        const [kluboviOdgovor, igraciOdgovor] = await Promise.all([
-          fetch(`${API_URL}/klubovi?per_page=100`),
-          fetch(`${API_URL}/igraci?per_page=100`),
+    const dohvatiJson = (url, poruka) =>
+      fetch(url).then((res) => {
+        if (!res.ok) throw new Error(poruka);
+        return res.json();
+      });
+
+    Promise.all([
+      dohvatiJson(`${API}/klubovi?per_page=100`, "Nije moguće dohvatiti klubove."),
+      dohvatiJson(`${API}/lige?per_page=100`, "Nije moguće dohvatiti lige."),
+    ])
+      .then(async ([kluboviData, ligeData]) => {
+        const sigurniKlubovi = (Array.isArray(kluboviData) ? kluboviData : []).sort(sortirajHr);
+        const sigurneLige = (Array.isArray(ligeData) ? ligeData : []).sort(sortirajHr);
+
+        setKlubovi(sigurniKlubovi);
+        setLige(sigurneLige);
+
+        const [logotipiK, logotipiL] = await Promise.all([
+          ucitajLogotipe(sigurniKlubovi),
+          ucitajLogotipe(sigurneLige),
         ]);
 
-        if (!kluboviOdgovor.ok) {
-          throw new Error("Nije moguće dohvatiti klubove.");
-        }
-
-        if (!igraciOdgovor.ok) {
-          throw new Error("Nije moguće dohvatiti igrače.");
-        }
-
-        const kluboviData = await kluboviOdgovor.json();
-        const igraciData = await igraciOdgovor.json();
-
-        if (!Array.isArray(kluboviData)) {
-          throw new Error("Podaci o klubovima nisu ispravni.");
-        }
-
-        setKlubovi(kluboviData);
-        setIgraci(Array.isArray(igraciData) ? igraciData : []);
-
-        const logoIds = [
-          ...new Set(
-            kluboviData
-              .map((klub) => klub.acf?.logo)
-              .filter(Boolean)
-              .map(Number)
-          ),
-        ];
-
-        const logoRezultati = await Promise.all(
-          logoIds.map(async (logoId) => {
-            try {
-              const odgovor = await fetch(
-                `${API_URL}/media/${logoId}`
-              );
-
-              if (!odgovor.ok) {
-                return [logoId, null];
-              }
-
-              const logoData = await odgovor.json();
-
-              const logoUrl =
-                logoData.media_details?.sizes?.medium?.source_url ||
-                logoData.source_url ||
-                null;
-
-              return [logoId, logoUrl];
-            } catch {
-              return [logoId, null];
-            }
-          })
-        );
-
-        setLogoMap(Object.fromEntries(logoRezultati));
-      } catch (error) {
+        setLogotipiKlubova(logotipiK);
+        setLogotipiLiga(logotipiL);
+      })
+      .catch((error) => {
         console.error("Greška pri dohvaćanju podataka:", error);
-        setGreska(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    dohvatiPodatke();
+        setStatus({ loading: false, greska: "Podatke trenutno nije moguće učitati." });
+        return;
+      })
+      .finally(() => setStatus((s) => ({ ...s, loading: false })));
   }, []);
 
-  const izvuciKlubId = (vrijednost) => {
-    if (Array.isArray(vrijednost)) {
-      return Number(vrijednost[0]);
+  const dohvatiLigu = (ligaId) => lige.find((liga) => liga.id === ligaId);
+
+  const filtriraniKlubovi = klubovi.filter((klub) => {
+    const ligaId = izvuciId(klub.acf?.liga);
+    const liga = dohvatiLigu(ligaId);
+    const pojam = search.trim().toLowerCase();
+
+    const odgovaraPretrazi =
+      (klub.title?.rendered || "").toLowerCase().includes(pojam) ||
+      (liga?.title?.rendered || "").toLowerCase().includes(pojam) ||
+      String(klub.acf?.drzava || "").toLowerCase().includes(pojam);
+
+    const odgovaraLigi = odabranaLiga === null || ligaId === odabranaLiga;
+
+    return odgovaraPretrazi && odgovaraLigi;
+  });
+
+  const prikazaniKlubovi =
+    prikaziSve || search || odabranaLiga ? filtriraniKlubovi : filtriraniKlubovi.slice(0, 4);
+
+  const odaberiLigu = (ligaId) => {
+    if (odabranaLiga === ligaId) {
+      setOdabranaLiga(null);
+      setPrikaziSve(false);
+    } else {
+      setOdabranaLiga(ligaId);
+      setPrikaziSve(true);
+      setSearch("");
     }
 
-    if (typeof vrijednost === "object" && vrijednost !== null) {
-      return Number(vrijednost.ID || vrijednost.id);
-    }
-
-    return Number(vrijednost);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const brojIgracaUKlubu = (klubId) => {
-    return igraci.filter((igrac) => {
-      const igracKlubId = izvuciKlubId(igrac.acf?.klub);
-
-      return igracKlubId === Number(klubId);
-    }).length;
+  const prikaziSveKlubove = () => {
+    setPrikaziSve(!prikaziSve);
+    setOdabranaLiga(null);
   };
 
-  const tekstBrojaIgraca = (broj) => {
-    if (broj === 1) return "1 hrvatski igrač";
-
-    return `${broj} hrvatskih igrača`;
-  };
-
-  const filtriraniKlubovi = klubovi.filter((klub) =>
-    klub.title?.rendered
-      ?.toLowerCase()
-      .includes(search.trim().toLowerCase())
-  );
-
-  if (loading) {
-    return <p className="container py-5">Učitavanje...</p>;
-  }
-
-  if (greska) {
+  if (status.loading) {
     return (
       <main className="container py-5">
-        <h1 className="fw-bold mb-3">Došlo je do pogreške</h1>
-        <p>{greska}</p>
+        <p>Učitavanje klubova...</p>
+      </main>
+    );
+  }
+
+  if (status.greska) {
+    return (
+      <main className="container py-5">
+        <div className="alert alert-danger">{status.greska}</div>
       </main>
     );
   }
@@ -133,78 +239,90 @@ function Klubovi() {
     <main className="container py-5">
       <div className="mb-4">
         <h1 className="fw-bold mb-2">Klubovi</h1>
-
         <p className="text-muted mb-0">
-          Pregled inozemnih klubova u kojima igraju hrvatski nogometaši.
+          Pregled klubova u kojima nastupaju hrvatski nogometaši. Odaberite klub za više informacija.
         </p>
       </div>
 
-      <input
-        type="text"
-        className="form-control mb-5"
-        placeholder="Pretraži klubove..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <div className="mb-4">
+        <label htmlFor="pretraga-klubova" className="form-label fw-semibold">
+          Pretraži klubove
+        </label>
 
-      {filtriraniKlubovi.length === 0 ? (
-        <p>Nema pronađenih klubova.</p>
+        <input
+          id="pretraga-klubova"
+          type="search"
+          className="form-control"
+          placeholder="Pretraži klub, ligu ili državu..."
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setOdabranaLiga(null);
+          }}
+        />
+      </div>
+
+      <div className="d-flex justify-content-end mb-3">
+        <button type="button" className="btn btn-outline-danger btn-sm" onClick={prikaziSveKlubove}>
+          {prikaziSve ? "Prikaži manje" : "Prikaži sve klubove"}
+        </button>
+      </div>
+
+      {odabranaLiga && (
+        <div className="alert alert-light border d-flex align-items-center justify-content-between">
+          <span>
+            Prikaz klubova iz lige: <strong>{dohvatiLigu(odabranaLiga)?.title?.rendered}</strong>
+          </span>
+
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => {
+              setOdabranaLiga(null);
+              setPrikaziSve(false);
+            }}
+          >
+            Poništi
+          </button>
+        </div>
+      )}
+
+      {prikazaniKlubovi.length === 0 ? (
+        <div className="alert alert-light border">Nema pronađenih klubova.</div>
       ) : (
         <div className="row g-4">
-          {filtriraniKlubovi.map((klub) => {
-            const logoId = Number(klub.acf?.logo);
-            const logoUrl = logoMap[logoId];
-            const brojIgraca = brojIgracaUKlubu(klub.id);
+          {prikazaniKlubovi.map((klub) => {
+            const ligaId = izvuciId(klub.acf?.liga);
+            const liga = dohvatiLigu(ligaId);
 
             return (
-              <div
-                className="col-6 col-md-4 col-lg-3"
+              <KlubKartica
                 key={klub.id}
-              >
-                <article className="card h-100 shadow-sm border-0 text-center">
-                  <div
-                    className="d-flex align-items-center justify-content-center p-4"
-                    style={{ height: "210px" }}
-                  >
-                    {logoUrl ? (
-                      <img
-                        src={logoUrl}
-                        alt={`Logo kluba ${klub.title.rendered}`}
-                        style={{
-                          width: "150px",
-                          height: "150px",
-                          objectFit: "contain",
-                        }}
-                      />
-                    ) : (
-                      <div className="text-muted">
-                        Logo nije unesen
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="card-body d-flex flex-column pt-0">
-                    <h2 className="h5 fw-bold mb-2">
-                      {klub.title.rendered}
-                    </h2>
-
-                    <p className="text-muted mb-4">
-                      👥 {tekstBrojaIgraca(brojIgraca)}
-                    </p>
-
-                    <Link
-                      to={`/klubovi/${klub.slug}`}
-                      className="btn btn-danger w-100 mt-auto"
-                    >
-                      Više o klubu
-                    </Link>
-                  </div>
-                </article>
-              </div>
+                klub={klub}
+                liga={liga}
+                logoKluba={logotipiKlubova[klub.id]}
+                logoLige={liga ? logotipiLiga[liga.id] : null}
+              />
             );
           })}
         </div>
       )}
+
+      <section className="mt-5 pt-2">
+        <h2 className="h4 fw-bold mb-4">Lige</h2>
+
+        <div className="row g-3">
+          {lige.slice(0, 8).map((liga) => (
+            <LigaDugme
+              key={liga.id}
+              liga={liga}
+              logo={logotipiLiga[liga.id]}
+              aktivna={odabranaLiga === liga.id}
+              onClick={() => odaberiLigu(liga.id)}
+            />
+          ))}
+        </div>
+      </section>
     </main>
   );
 }

@@ -1,8 +1,82 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 
-const API_URL =
-  "https://front3.edukacija.online/backend/wp-json/wp/v2";
+const API = "https://front3.edukacija.online/backend/wp-json/wp/v2";
+
+const izvuciId = (vrijednost) => {
+  if (Array.isArray(vrijednost)) return Number(vrijednost[0]);
+  return Number(vrijednost);
+};
+
+const dohvatiSliku = async (vrijednost) => {
+  if (!vrijednost) return "";
+
+  if (typeof vrijednost === "string" && vrijednost.startsWith("http")) {
+    return vrijednost;
+  }
+
+  if (typeof vrijednost === "object") {
+    return vrijednost.sizes?.medium || vrijednost.sizes?.large || vrijednost.url || "";
+  }
+
+  try {
+    const odgovor = await fetch(`${API}/media/${izvuciId(vrijednost)}`);
+    if (!odgovor.ok) return "";
+    const slika = await odgovor.json();
+    return slika.source_url || "";
+  } catch (error) {
+    console.error("Greška pri dohvaćanju slike:", error);
+    return "";
+  }
+};
+
+const prikaziVrijednost = (vrijednost) =>
+  vrijednost || vrijednost === 0 ? vrijednost : "Nije uneseno";
+
+function InfoBox({ label, icon, value }) {
+  return (
+    <div className="col-md-6">
+      <div className="border rounded p-3 h-100">
+        <small className="text-muted d-block mb-1">{label}</small>
+        <strong>{icon} {value}</strong>
+      </div>
+    </div>
+  );
+}
+
+function IgracKartica({ igrac }) {
+  const fotografija = igrac._embedded?.["wp:featuredmedia"]?.[0]?.source_url;
+
+  return (
+    <div className="col-md-6 col-lg-4">
+      <article className="card h-100 shadow-sm border-0 overflow-hidden">
+        {fotografija ? (
+          <img
+            src={fotografija}
+            alt={igrac.title.rendered}
+            className="card-img-top"
+            style={{ height: "320px", objectFit: "cover", objectPosition: "top" }}
+          />
+        ) : (
+          <div
+            className="bg-light d-flex align-items-center justify-content-center text-muted"
+            style={{ height: "320px" }}
+          >
+            Fotografija nije unesena
+          </div>
+        )}
+
+        <div className="card-body d-flex flex-column text-center p-4">
+          <h3 className="h4 fw-bold mb-4">{igrac.title.rendered}</h3>
+
+          <Link to={`/igraci/${igrac.slug}`} className="btn btn-danger w-100 mt-auto">
+            Više o igraču
+          </Link>
+        </div>
+      </article>
+    </div>
+  );
+}
 
 function KlubDetalji() {
   const { slug } = useParams();
@@ -12,175 +86,66 @@ function KlubDetalji() {
   const [igraci, setIgraci] = useState([]);
   const [logoKluba, setLogoKluba] = useState("");
   const [logoLige, setLogoLige] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [greska, setGreska] = useState("");
+  const [status, setStatus] = useState({ loading: true, greska: "" });
 
   useEffect(() => {
-    const dohvatiPodatke = async () => {
-      try {
-        setLoading(true);
-        setGreska("");
+    const dohvatiJson = (url, poruka) =>
+      fetch(url).then((res) => {
+        if (!res.ok) throw new Error(poruka);
+        return res.json();
+      });
 
-        const [klubOdgovor, ligeOdgovor, igraciOdgovor] =
-          await Promise.all([
-            fetch(`${API_URL}/klubovi?slug=${slug}`),
-            fetch(`${API_URL}/lige?per_page=100`),
-            fetch(`${API_URL}/igraci?_embed&per_page=100`)
-          ]);
-
-        if (!klubOdgovor.ok) {
-          throw new Error("Nije moguće dohvatiti klub.");
-        }
-
-        if (!ligeOdgovor.ok) {
-          throw new Error("Nije moguće dohvatiti ligu.");
-        }
-
-        if (!igraciOdgovor.ok) {
-          throw new Error("Nije moguće dohvatiti igrače.");
-        }
-
-        const kluboviData = await klubOdgovor.json();
-        const ligeData = await ligeOdgovor.json();
-        const igraciData = await igraciOdgovor.json();
-
-        const pronadeniKlub = Array.isArray(kluboviData)
-          ? kluboviData[0]
-          : null;
-
-        if (!pronadeniKlub) {
-          setKlub(null);
-          return;
-        }
-
+    Promise.all([
+      dohvatiJson(`${API}/klubovi?slug=${slug}`, "Nije moguće dohvatiti klub."),
+      dohvatiJson(`${API}/lige?per_page=100`, "Nije moguće dohvatiti lige."),
+      dohvatiJson(`${API}/igraci?_embed&per_page=100`, "Nije moguće dohvatiti igrače."),
+    ])
+      .then(async ([kluboviData, ligeData, igraciData]) => {
+        const pronadeniKlub = kluboviData[0] || null;
         setKlub(pronadeniKlub);
 
-        const klubAcf = pronadeniKlub.acf || {};
+        if (!pronadeniKlub) return;
 
+        const klubAcf = pronadeniKlub.acf || {};
         const ligaId = izvuciId(klubAcf.liga);
 
         const pronadenaLiga = Array.isArray(ligeData)
-          ? ligeData.find((ligaStavka) => ligaStavka.id === ligaId)
+          ? ligeData.find((l) => l.id === ligaId)
           : null;
 
         setLiga(pronadenaLiga || null);
 
         const igraciKluba = Array.isArray(igraciData)
-          ? igraciData.filter((igrac) => {
-              const igracKlubId = izvuciId(igrac.acf?.klub);
-
-              return igracKlubId === pronadeniKlub.id;
-            })
+          ? igraciData.filter((igrac) => izvuciId(igrac.acf?.klub) === pronadeniKlub.id)
           : [];
 
         setIgraci(igraciKluba);
 
-        const klubLogoVrijednost = klubAcf.logo;
-
-        const ligaLogoVrijednost =
-          pronadenaLiga?.acf?.logo ||
-          pronadenaLiga?.acf?.logo_lige ||
-          pronadenaLiga?.acf?.grb;
-
         const [klubLogoUrl, ligaLogoUrl] = await Promise.all([
-          dohvatiSliku(klubLogoVrijednost),
-          dohvatiSliku(ligaLogoVrijednost),
+          dohvatiSliku(klubAcf.logo),
+          dohvatiSliku(pronadenaLiga?.acf?.logo),
         ]);
 
         setLogoKluba(klubLogoUrl);
         setLogoLige(ligaLogoUrl);
-      } catch (error) {
+      })
+      .catch((error) => {
         console.error("Greška pri dohvaćanju kluba:", error);
-        setGreska(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    dohvatiPodatke();
+        setStatus({ loading: false, greska: error.message });
+        return;
+      })
+      .finally(() => setStatus((s) => ({ ...s, loading: false })));
   }, [slug]);
 
-  const izvuciId = (vrijednost) => {
-    if (!vrijednost) return null;
-
-    if (Array.isArray(vrijednost)) {
-      return izvuciId(vrijednost[0]);
-    }
-
-    if (typeof vrijednost === "object") {
-      return Number(
-        vrijednost.ID ||
-          vrijednost.id ||
-          vrijednost.value ||
-          vrijednost.databaseId
-      );
-    }
-
-    return Number(vrijednost);
-  };
-
-  const dohvatiSliku = async (vrijednost) => {
-    if (!vrijednost) return "";
-
-    if (typeof vrijednost === "string" && vrijednost.startsWith("http")) {
-      return vrijednost;
-    }
-
-    if (typeof vrijednost === "object" && !Array.isArray(vrijednost)) {
-      return (
-        vrijednost.sizes?.medium ||
-        vrijednost.sizes?.large ||
-        vrijednost.url ||
-        vrijednost.source_url ||
-        ""
-      );
-    }
-
-    const mediaId = izvuciId(vrijednost);
-
-    if (!mediaId) return "";
-
-    try {
-      const odgovor = await fetch(`${API_URL}/media/${mediaId}`);
-
-      if (!odgovor.ok) return "";
-
-      const media = await odgovor.json();
-
-      return (
-        media.media_details?.sizes?.medium?.source_url ||
-        media.media_details?.sizes?.large?.source_url ||
-        media.source_url ||
-        ""
-      );
-    } catch (error) {
-      console.error("Greška pri dohvaćanju slike:", error);
-      return "";
-    }
-  };
-
-  const prikaziVrijednost = (vrijednost) => {
-    return vrijednost || vrijednost === 0
-      ? vrijednost
-      : "Nije uneseno";
-  };
-
-  const tekstBrojaIgraca = (broj) => {
-    if (broj === 1) return "1 hrvatski igrač";
-
-    return `${broj} hrvatskih igrača`;
-  };
-
-  if (loading) {
+  if (status.loading) {
     return <p className="container py-5">Učitavanje...</p>;
   }
 
-  if (greska) {
+  if (status.greska) {
     return (
       <main className="container py-5">
         <h1 className="fw-bold mb-3">Došlo je do pogreške</h1>
-        <p>{greska}</p>
-
+        <p>{status.greska}</p>
         <Link to="/klubovi" className="btn btn-outline-secondary">
           ← Natrag na klubove
         </Link>
@@ -192,7 +157,6 @@ function KlubDetalji() {
     return (
       <main className="container py-5">
         <p>Klub nije pronađen.</p>
-
         <Link to="/klubovi" className="btn btn-outline-secondary">
           ← Natrag na klubove
         </Link>
@@ -201,6 +165,13 @@ function KlubDetalji() {
   }
 
   const acf = klub.acf || {};
+
+  const stavke = [
+    { label: "Država", icon: "🌍", value: prikaziVrijednost(acf.drzava) },
+    { label: "Grad", icon: "🏙️", value: prikaziVrijednost(acf.grad) },
+    { label: "Stadion", icon: "🏟️", value: prikaziVrijednost(acf.stadion) },
+    { label: "Godina osnutka", icon: "📅", value: prikaziVrijednost(acf.godina_osnutka) },
+  ];
 
   return (
     <main className="container py-5">
@@ -219,12 +190,7 @@ function KlubDetalji() {
                 <img
                   src={logoKluba}
                   alt={`Logo kluba ${klub.title.rendered}`}
-                  style={{
-                    width: "100%",
-                    maxWidth: "330px",
-                    maxHeight: "330px",
-                    objectFit: "contain",
-                  }}
+                  style={{ width: "100%", maxWidth: "330px", maxHeight: "330px", objectFit: "contain" }}
                 />
               ) : (
                 <p className="text-muted mb-0">Logo nije unesen</p>
@@ -234,13 +200,8 @@ function KlubDetalji() {
 
           <div className="col-lg-7">
             <div className="p-4 p-lg-5">
-              <p className="text-danger fw-bold text-uppercase mb-2">
-                Profil kluba
-              </p>
-
-              <h1 className="display-5 fw-bold mb-4">
-                {klub.title.rendered}
-              </h1>
+              <p className="text-danger fw-bold text-uppercase mb-2">Profil kluba</p>
+              <h1 className="display-5 fw-bold mb-4">{klub.title.rendered}</h1>
 
               <div className="border rounded p-3 mb-3">
                 <small className="text-muted d-block mb-2">Liga</small>
@@ -249,181 +210,51 @@ function KlubDetalji() {
                   {logoLige ? (
                     <img
                       src={logoLige}
-                      alt={
-                        liga
-                          ? `Logo lige ${liga.title.rendered}`
-                          : "Logo lige"
-                      }
-                      style={{
-                        width: "65px",
-                        height: "65px",
-                        objectFit: "contain",
-                      }}
+                      alt={`Logo lige ${liga?.title?.rendered || ""}`}
+                      style={{ width: "65px", height: "65px", objectFit: "contain" }}
                     />
                   ) : (
                     <div
-                      className="bg-light rounded d-flex align-items-center justify-content-center text-muted"
-                      style={{
-                        width: "65px",
-                        height: "65px",
-                        flexShrink: 0,
-                      }}
+                      className="bg-light rounded d-flex align-items-center justify-content-center"
+                      style={{ width: "65px", height: "65px" }}
                     >
                       🏆
                     </div>
                   )}
 
-                  <strong className="fs-5">
-                    {liga?.title?.rendered || "Nije uneseno"}
-                  </strong>
+                  <strong className="fs-5">{liga?.title?.rendered || "Nije uneseno"}</strong>
                 </div>
               </div>
 
               <div className="row g-3">
-                <div className="col-md-6">
-                  <div className="border rounded p-3 h-100">
-                    <small className="text-muted d-block mb-1">
-                      Država
-                    </small>
-
-                    <strong>
-                      🌍 {prikaziVrijednost(acf.drzava)}
-                    </strong>
-                  </div>
-                </div>
-
-                <div className="col-md-6">
-                  <div className="border rounded p-3 h-100">
-                    <small className="text-muted d-block mb-1">
-                      Grad
-                    </small>
-
-                    <strong>🏙️ {prikaziVrijednost(acf.grad)}</strong>
-                  </div>
-                </div>
-
-                <div className="col-md-6">
-                  <div className="border rounded p-3 h-100">
-                    <small className="text-muted d-block mb-1">
-                      Stadion
-                    </small>
-
-                    <strong>
-                      🏟️ {prikaziVrijednost(acf.stadion)}
-                    </strong>
-                  </div>
-                </div>
-
-                <div className="col-md-6">
-                  <div className="border rounded p-3 h-100">
-                    <small className="text-muted d-block mb-1">
-                      Godina osnutka
-                    </small>
-
-                    <strong>
-                      📅 {prikaziVrijednost(acf.godina_osnutka)}
-                    </strong>
-                  </div>
-                </div>
-
-                <div className="col-12">
-                  <div className="border rounded p-3">
-                    <small className="text-muted d-block mb-1">
-                      Hrvatski igrači u klubu
-                    </small>
-
-                    <strong>
-                      👥 {tekstBrojaIgraca(igraci.length)}
-                    </strong>
-                  </div>
-                </div>
+                {stavke.map((stavka) => (
+                  <InfoBox key={stavka.label} {...stavka} />
+                ))}
               </div>
             </div>
           </div>
         </div>
       </article>
+
       <section className="mt-5">
-  <div className="mb-4">
-    <h2 className="fw-bold mb-2">
-      Hrvatski igrači u ovom klubu
-    </h2>
+        <h2 className="fw-bold mb-4">
+          Hrvatski igrači koji trenutačno nastupaju za ovaj klub
+        </h2>
 
-    <p className="text-muted mb-0">
-      Igrači iz Hrvatske koji trenutačno nastupaju za ovaj klub.
-    </p>
-  </div>
-
-  {igraci.length === 0 ? (
-    <div className="card border-0 shadow-sm">
-      <div className="card-body p-4">
-        <p className="mb-0">
-          Trenutačno nema unesenih hrvatskih igrača za ovaj klub.
-        </p>
-      </div>
-    </div>
-  ) : (
-    <div className="row g-4">
-      {igraci.map((igrac) => {
-        const acfIgraca = igrac.acf || {};
-
-        const fotografija =
-          igrac._embedded?.["wp:featuredmedia"]?.[0]?.source_url;
-
-        return (
-          <div
-            className="col-md-6 col-lg-4"
-            key={igrac.id}
-          >
-            <article className="card h-100 shadow-sm border-0 overflow-hidden">
-              {fotografija ? (
-                <img
-                  src={fotografija}
-                  alt={igrac.title.rendered}
-                  className="card-img-top"
-                  style={{
-                    height: "320px",
-                    objectFit: "cover",
-                    objectPosition: "top",
-                  }}
-                />
-              ) : (
-                <div
-                  className="bg-light d-flex align-items-center justify-content-center text-muted"
-                  style={{ height: "320px" }}
-                >
-                  Fotografija nije unesena
-                </div>
-              )}
-
-              <div className="card-body d-flex flex-column p-4">
-                <h3 className="h4 fw-bold mb-3">
-                  {igrac.title.rendered}
-                </h3>
-
-                <p className="mb-2">
-                  <strong>⚽ Pozicija:</strong>{" "}
-                  {acfIgraca.pozicija || "Nije uneseno"}
-                </p>
-
-                <p className="mb-4">
-                  <strong>👕 Broj dresa:</strong>{" "}
-                  {acfIgraca.broj_dresa || "Nije uneseno"}
-                </p>
-
-                <Link
-                  to={`/igraci/${igrac.slug}`}
-                  className="btn btn-danger w-100 mt-auto"
-                >
-                  Više o igraču
-                </Link>
-              </div>
-            </article>
+        {igraci.length === 0 ? (
+          <div className="card border-0 shadow-sm">
+            <div className="card-body p-4">
+              <p className="mb-0">Trenutačno nema unesenih hrvatskih igrača za ovaj klub.</p>
+            </div>
           </div>
-        );
-      })}
-    </div>
-  )}
-</section>
+        ) : (
+          <div className="row g-4">
+            {igraci.map((igrac) => (
+              <IgracKartica key={igrac.id} igrac={igrac} />
+            ))}
+          </div>
+        )}
+      </section>
     </main>
   );
 }

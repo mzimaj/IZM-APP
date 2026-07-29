@@ -1,73 +1,156 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
+const API = "https://front3.edukacija.online/backend/wp-json/wp/v2";
+
+function IgracCard({ igrac, klub, logoUrl }) {
+  const fotografija = igrac._embedded?.["wp:featuredmedia"]?.[0]?.source_url;
+
+  return (
+    <div className="col-12 col-lg-6 d-flex">
+      <article
+  className="card shadow-sm border-0 overflow-hidden d-flex flex-row w-100"
+  style={{ height: "240px" }}
+>
+        {fotografija ? (
+          <div className="cfa-player-photo">
+            <img
+              src={fotografija}
+              alt={igrac.title.rendered}
+            />
+          </div>
+        ) : (
+          <div className="cfa-player-photo-empty bg-light d-flex align-items-center justify-content-center text-muted text-center p-3">
+            Fotografija nije unesena
+          </div>
+        )}
+
+        <div className="card-body cfa-player-body d-flex flex-column align-items-center justify-content-center text-center flex-grow-1">
+          <h2 className="h5 fw-bold">{igrac.title.rendered}</h2>
+
+          {klub && (
+            <Link
+              to={`/klubovi/${klub.slug}`}
+              className="cfa-player-club-link d-flex align-items-center justify-content-center"
+              title={`Otvori klub ${klub.title.rendered}`}
+            >
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={`Logo kluba ${klub.title.rendered}`}
+                />
+              ) : (
+                <span className="fs-4">🏟️</span>
+              )}
+            </Link>
+          )}
+
+          <Link
+            to={`/igraci/${igrac.slug}`}
+            className="btn btn-danger btn-sm w-100 mt-auto"
+          >
+            Više o igraču
+          </Link>
+        </div>
+      </article>
+    </div>
+  );
+}
+
 function Igraci() {
   const [igraci, setIgraci] = useState([]);
   const [klubovi, setKlubovi] = useState([]);
-  const [lige, setLige] = useState([]);
+  const [logotipi, setLogotipi] = useState({});
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [prikaziSve, setPrikaziSve] = useState(false);
+  const [status, setStatus] = useState({ loading: true, greska: "" });
 
   useEffect(() => {
+    const dohvatiJson = (url, poruka) =>
+      fetch(url).then((res) => {
+        if (!res.ok) {
+          throw new Error(poruka);
+        }
+
+        return res.json();
+      });
+
     Promise.all([
-      fetch(
-        "https://front3.edukacija.online/backend/wp-json/wp/v2/igraci?_embed&per_page=100"
-      ).then((res) => res.json()),
-
-      fetch(
-        "https://front3.edukacija.online/backend/wp-json/wp/v2/klubovi?per_page=100"
-      ).then((res) => res.json()),
-
-      fetch(
-        "https://front3.edukacija.online/backend/wp-json/wp/v2/lige?per_page=100"
-      ).then((res) => res.json()),
+      dohvatiJson(
+        `${API}/igraci?_embed&per_page=100`,
+        "Greška pri dohvaćanju igrača."
+      ),
+      dohvatiJson(
+        `${API}/klubovi?per_page=100`,
+        "Greška pri dohvaćanju klubova."
+      ),
     ])
-      .then(([igraciData, kluboviData, ligeData]) => {
-        setIgraci(Array.isArray(igraciData) ? igraciData : []);
-        setKlubovi(Array.isArray(kluboviData) ? kluboviData : []);
-        setLige(Array.isArray(ligeData) ? ligeData : []);
+      .then(async ([igraciData, kluboviData]) => {
+        igraciData.sort((a, b) =>
+          a.title.rendered.localeCompare(b.title.rendered, "hr")
+        );
+
+        const logoIds = [
+          ...new Set(
+            kluboviData
+              .map((klub) => Number(klub.acf?.logo))
+              .filter(Boolean)
+          ),
+        ];
+
+        const logoZapisi = await Promise.all(
+          logoIds.map((id) =>
+            fetch(`${API}/media/${id}`)
+              .then((res) => (res.ok ? res.json() : null))
+              .then((media) => (media ? [id, media.source_url] : null))
+          )
+        );
+
+        setIgraci(igraciData);
+        setKlubovi(kluboviData);
+        setLogotipi(Object.fromEntries(logoZapisi.filter(Boolean)));
       })
       .catch((error) => {
         console.error("Greška pri dohvaćanju podataka:", error);
+        setStatus({
+          loading: false,
+          greska: "Podatke trenutno nije moguće učitati.",
+        });
       })
       .finally(() => {
-        setLoading(false);
+        setStatus((stariStatus) => ({
+          ...stariStatus,
+          loading: false,
+        }));
       });
   }, []);
 
-  const dohvatiKlub = (klubVrijednost) => {
-    const klubId = Array.isArray(klubVrijednost)
-      ? klubVrijednost[0]
-      : klubVrijednost;
+  if (status.loading) {
+    return (
+      <main className="container py-5">
+        <p>Učitavanje igrača...</p>
+      </main>
+    );
+  }
 
-    const klub = klubovi.find((k) => k.id === Number(klubId));
+  if (status.greska) {
+    return (
+      <main className="container py-5">
+        <div className="alert alert-danger">{status.greska}</div>
+      </main>
+    );
+  }
 
-    return klub ? klub.title.rendered : "Nije uneseno";
-  };
-
-  const dohvatiLigu = (ligaVrijednost) => {
-    const ligaId = Array.isArray(ligaVrijednost)
-      ? ligaVrijednost[0]
-      : ligaVrijednost;
-
-    const liga = lige.find((l) => l.id === Number(ligaId));
-
-    return liga ? liga.title.rendered : "Nije uneseno";
-  };
-
-  const prikaziVrijednost = (vrijednost) => {
-    return vrijednost || "Nije uneseno";
-  };
-
-  const filtriraniIgraci = igraci.filter((igrac) =>
-    igrac.title?.rendered
-      ?.toLowerCase()
+  const filtrirani = igraci.filter((igrac) =>
+    igrac.title.rendered
+      .toLowerCase()
       .includes(search.trim().toLowerCase())
   );
 
-  if (loading) {
-    return <p className="container py-5">Učitavanje...</p>;
-  }
+  const prikazani =
+    prikaziSve || search
+      ? filtrirani
+      : filtrirani.slice(0, 6);
 
   return (
     <main className="container py-5">
@@ -79,88 +162,43 @@ function Igraci() {
       </div>
 
       <input
-        type="text"
-        className="form-control mb-5"
+        type="search"
+        className="form-control mb-3"
         placeholder="Pretraži igrače..."
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(event) => setSearch(event.target.value)}
       />
 
-      {filtriraniIgraci.length === 0 ? (
-        <p>Nema pronađenih igrača.</p>
-      ) : (
-        <div className="row g-4">
-          {filtriraniIgraci.map((igrac) => {
-            const acf = igrac.acf || {};
+      <div className="d-flex justify-content-end mb-4">
+        <button
+          type="button"
+          className="btn btn-outline-danger btn-sm"
+          onClick={() => setPrikaziSve(!prikaziSve)}
+        >
+          {prikaziSve ? "Prikaži manje" : "Prikaži sve igrače"}
+        </button>
+      </div>
 
-            const fotografija =
-              igrac._embedded?.["wp:featuredmedia"]?.[0]?.source_url;
+      {prikazani.length === 0 ? (
+        <div className="alert alert-light border">
+          Nema pronađenih igrača.
+        </div>
+      ) : (
+        <div className="row g-4 align-items-stretch">
+          {prikazani.map((igrac) => {
+            const klub = klubovi.find(
+              (stavka) => stavka.id === Number(igrac.acf?.klub)
+            );
+
+            const logoUrl = logotipi[Number(klub?.acf?.logo)];
 
             return (
-              <div
-                className="col-md-6 col-lg-4"
+              <IgracCard
                 key={igrac.id}
-              >
-                <article className="card h-100 shadow-sm border-0 overflow-hidden">
-                  {fotografija ? (
-                    <img
-                      src={fotografija}
-                      alt={igrac.title.rendered}
-                      className="card-img-top"
-                      style={{
-                        height: "360px",
-                        objectFit: "cover",
-                        objectPosition: "top",
-                      }}
-                    />
-                  ) : (
-                    <div
-                      className="bg-light d-flex align-items-center justify-content-center text-muted"
-                      style={{ height: "360px" }}
-                    >
-                      Fotografija nije unesena
-                    </div>
-                  )}
-
-                  <div className="card-body d-flex flex-column p-4">
-                    <h2 className="h4 fw-bold mb-3">
-                      {igrac.title.rendered}
-                    </h2>
-
-                    <p className="mb-2">
-                      <strong>🏟 Klub:</strong>{" "}
-                      {dohvatiKlub(acf.klub)}
-                    </p>
-
-                    <p className="mb-2">
-                      <strong>🏆 Liga:</strong>{" "}
-                      {dohvatiLigu(acf.liga)}
-                    </p>
-
-                    <p className="mb-2">
-                      <strong>🌍 Država:</strong>{" "}
-                      {prikaziVrijednost(acf.drzava)}
-                    </p>
-
-                    <p className="mb-2">
-                      <strong>⚽ Pozicija:</strong>{" "}
-                      {prikaziVrijednost(acf.pozicija)}
-                    </p>
-
-                    <p className="mb-4">
-                      <strong>👕 Broj dresa:</strong>{" "}
-                      {prikaziVrijednost(acf.broj_dresa)}
-                    </p>
-
-                    <Link
-                      to={`/igraci/${igrac.slug}`}
-                      className="btn btn-danger w-100 mt-auto"
-                    >
-                      Više o igraču
-                    </Link>
-                  </div>
-                </article>
-              </div>
+                igrac={igrac}
+                klub={klub}
+                logoUrl={logoUrl}
+              />
             );
           })}
         </div>

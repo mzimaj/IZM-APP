@@ -28,10 +28,14 @@ import Igraci from "./pages/Igraci";
 import IgracDetalji from "./pages/IgracDetalji";
 import Klubovi from "./pages/Klubovi";
 import KlubDetalji from "./pages/KlubDetalji";
+import Vijesti from "./pages/Vijesti";
 import OPortalu from "./pages/OPortalu";
 import CookieBanner from "./components/CookieBanner";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import CookiePolicy from "./pages/CookiePolicy";
 
+import ScrollToTop from "./components/ScrollToTop";
+import ScrollToTopButton from "./components/ScrollToTopButton";
 
 
 
@@ -41,6 +45,7 @@ function App() {
     <>
       <AuthProvider>
         <BrowserRouter>
+        <ScrollToTop />
           <Nav />
           <Routes>
             <Route path="/" element={<Naslovnica />} />
@@ -51,10 +56,12 @@ function App() {
             <Route path="/igraci/:slug" element={<IgracDetalji />} />
             <Route path="/klubovi" element={<Klubovi />} />
             <Route path="/klubovi/:slug" element={<KlubDetalji />} />
+            <Route path="/vijesti" element={<Vijesti />} />
             <Route path="/o-portalu" element={<OPortalu />} />
 
 
             <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/cookie-policy" element={<CookiePolicy />} />
 
             <Route path="/lightbox" element={<Lightbox1 />} />
 
@@ -77,7 +84,9 @@ function App() {
 
           </Routes>
           <Footer />
+          <ScrollToTopButton />
           <CookieBanner />
+          
         </BrowserRouter>
       </AuthProvider>
     </>
